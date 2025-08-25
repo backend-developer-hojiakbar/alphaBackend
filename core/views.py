@@ -108,7 +108,7 @@ class UserManagementViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer
     permission_classes = [IsAdminUser]
-    lookup_field = 'phone'
+    lookup_field = 'pk'
 
 
 class SubscriptionManagementViewSet(viewsets.ModelViewSet):

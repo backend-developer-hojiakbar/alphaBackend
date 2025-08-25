@@ -1,5 +1,3 @@
-# core/serializers.py
-
 from rest_framework import serializers
 from .models import *
 
@@ -23,7 +21,6 @@ class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ('id', 'phone', 'name', 'status')
-        read_only_fields = ('id', 'phone')
 
 
 class ProductSerializer(serializers.ModelSerializer):
@@ -47,7 +44,8 @@ class TemplateSerializer(serializers.ModelSerializer):
 class PriceListSerializer(serializers.ModelSerializer):
     class Meta:
         model = PriceList
-        fields = ('variants', 'lastUpdated')
+        fields = ('user', 'variants', 'lastUpdated')
+        read_only_fields = ('user',)
 
 
 class TariffPlanSerializer(serializers.ModelSerializer):
@@ -65,10 +63,7 @@ class PromoCodeSerializer(serializers.ModelSerializer):
 class SubscriptionSerializer(serializers.ModelSerializer):
     user = UserSerializer(read_only=True)
     plan = TariffPlanSerializer(read_only=True)
-
-    userId = serializers.PrimaryKeyRelatedField(
-        queryset=User.objects.all(), source='user', write_only=True
-    )
+    userId = serializers.CharField(source='user.phone', write_only=True)
     planId = serializers.PrimaryKeyRelatedField(
         queryset=TariffPlan.objects.all(), source='plan', write_only=True
     )
@@ -76,6 +71,16 @@ class SubscriptionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Subscription
         fields = ('id', 'user', 'plan', 'status', 'expiresAt', 'userId', 'planId')
+
+    def create(self, validated_data):
+        user_phone = validated_data.pop('user', {}).get('phone')
+        try:
+            user_instance = User.objects.get(phone=user_phone)
+        except User.DoesNotExist:
+            raise serializers.ValidationError({"userId": f"Foydalanuvchi '{user_phone}' topilmadi."})
+
+        validated_data['user'] = user_instance
+        return super().create(validated_data)
 
 
 class OrderSerializer(serializers.ModelSerializer):
